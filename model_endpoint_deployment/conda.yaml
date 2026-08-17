@@ -1,0 +1,27 @@
+# =================배포 환경====================
+# MS data school 4기 1차 프로젝트
+# 1팀(팀명: eve) 모델 배포 환경 코드
+# =====================================
+### ====================================
+### 파일 이름: 4dt1team_conda.yaml
+### 작업환경 : Azure ML Studio > Notebooks
+### subscription_id  : "27db5ec6-d206-4028-b5e1-6004dca5eeef" # 대한상공회의소 dataschool 4기
+### resource_group   : "4dt_team_1"
+### workspace_name   : "ev-modeling-ML"
+### endpoint_name    : ev-anomaly-endpoint-6403dedf
+### deployment       : purple2
+### =====================================
+name: ev-lgbm-inference-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - azureml-inference-server-http
+      - pandas==2.2.2
+      - numpy==1.23.5
+      - scikit-learn==1.5.1
+      - lightgbm==4.5.0
+      - joblib==1.4.2
+      - inference-schema[numpy-support]  # 이게 있어야 함

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EV PULSE Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+  <div class="dashboard">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">⚡</div>
+        <div>
+          <h1>EV PULSE</h1>
+          <p>EV Battery Anomaly Monitoring System</p>
+        </div>
+      </div>
+
+      <div class="nav-menu-tabs">
+        <button type="button" class="menu-tab-btn active" id="tabBtnMain" onclick="changeDashboardTab('main-dash')">대시보드</button>
+        <button type="button" class="menu-tab-btn" id="tabBtnMonitor" onclick="changeDashboardTab('car-monitor')">차량 모니터링</button>
+        <button type="button" class="menu-tab-btn" id="tabBtnReport" onclick="changeDashboardTab('report-download')">보고서 다운로드</button>
+      </div>
+
+      <div class="region-filter" id="topRegionFilterSection">
+        <span>지역 선택</span>
+        <select id="regionSelect">
+          <option value="ALL">전국</option>
+          <option value="SEOUL">서울특별시</option>
+          <option value="BUSAN">부산광역시</option>
+          <option value="DAEGU">대구광역시</option>
+          <option value="INCHEON">인천광역시</option>
+          <option value="GWANGJU">광주광역시</option>
+          <option value="DAEJEON">대전광역시</option>
+          <option value="ULSAN">울산광역시</option>
+          <option value="SEJONG">세종특별자치시</option>
+          <option value="GYEONGGI">경기도</option>
+          <option value="GANGWON">강원특별자치도</option>
+          <option value="CHUNGBUK">충청북도</option>
+          <option value="CHUNGNAM">충청남도</option>
+          <option value="JEONBUK">전북특별자치도</option>
+          <option value="JEONNAM">전라남도</option>
+          <option value="GYEONGBUK">경상북도</option>
+          <option value="GYEONGNAM">경상남도</option>
+          <option value="JEJU">제주특별자치도</option>
+        </select>
+      </div>
+
+      <div class="status-bar">
+        <span class="online-dot"></span>
+        <span>실시간 관제 데이터 동기화 중</span>
+        <span>|</span>
+        <span id="currentDate" class="clock-highlight-text">2026-05-26 (화)</span>
+        <span>|</span>
+        <span id="currentTime" class="clock-highlight-text">16:00:00</span>
+      </div>
+    </header>
+
+    <main class="layout" id="mainDashboardContentBlock">
+      <section class="map-panel">
+        <div class="panel-title">
+          <div>
+            <h2>실시간 차량 위치 지도</h2>
+            <p id="mapRegionText">전국</p>
+          </div>
+          <button type="button" id="btnZoomFit">지도 위치 리셋</button>
+        </div>
+
+        <div class="map-container">
+          <div id="mapArea"></div>
+          
+          <div class="map-legend">
+            <span><i class="dot normal-dot"></i>정상</span>
+            <span><i class="dot warning-dot"></i>경고</span>
+            <span><i class="dot danger-dot"></i>위험</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right-column">
+        <section class="panel alert-panel">
+          <div class="panel-title">
+            <h2>실시간 위험 차량 및 알림 <span>(최근 1시간)</span></h2>
+            <a onclick="openModal('alert')">전체 보기 ›</a>
+          </div>
+
+          <div class="alert-cards" id="alertCards"></div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>시간</th>
+                  <th>차량 ID</th>
+                  <th>위치</th>
+                  <th>BSI</th>
+                  <th>상태</th>
+                  <th>이벤트</th>
+                </tr>
+              </thead>
+              <tbody id="alertTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel summary-panel">
+          <div class="panel-title">
+            <h2 id="summaryTitle">차량 상태 요약 (전국)</h2>
+          </div>
+          <div class="summary-content">
+            <div class="chart-container">
+              <canvas id="statusChart"></canvas>
+              <div class="chart-center-text">
+                <span id="chartCenterNum">0</span>
+                <p>전체 차량</p>
+              </div>
+            </div>
+            <div class="summary-side">
+              <div class="summary-metrics" id="summaryMetrics"></div>
+              <div class="status-bars" id="statusBars"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel top-panel">
+          <div class="panel-title">
+            <h2>위험 차량 TOP 5</h2>
+            <a onclick="openModal('top')">전체 보기 ›</a>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>순위</th>
+                  <th>차량 ID</th>
+                  <th>위치</th>
+                  <th>BSI</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="topRiskTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <div id="carMonitoringContentBlock" class="monitor-screen-layout" style="display: none;">
+      <aside class="monitor-sidebar-panel">
+        <h3>차량 목록 (BMW)</h3>
+        <div class="search-input-wrapper">
+          <input type="text" placeholder="차량 ID 검색..." id="monitorSearchField" onkeyup="searchMonitorVehicleList()" />
+        </div>
+        <div class="monitor-list-scroll-box" id="sidebarVehicleListGroup"></div>
+      </aside>
+
+      <main class="monitor-details-pane">
+        <div class="monitor-meta-header-row" id="detailMetaHeaderCard"></div>
+
+        <div class="monitor-core-grid">
+          <div class="panel monitor-main-graph-card">
+            <h3>BSI 추이 (최근 24시간)</h3>
+            <div class="main-canvas-frame">
+              <canvas id="detailBsiLineChart"></canvas>
+            </div>
+            <div class="monitor-footer-specs" id="detailCarBottomSpecs"></div>
+          </div>
+
+          <div class="monitor-sub-right-stack">
+            <div class="panel monitor-log-list-card">
+              <div class="panel-title">
+                <h3>최근 이벤트 (최근 1시간)</h3>
+                <a href="#">전체 보기 ›</a>
+              </div>
+              <div class="table-wrapper">
+                <table class="minimal-grid-table">
+                  <tbody id="detailLiveEventLogs"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel monitor-reason-analysis-card">
+              <h3>위험 원인 분석</h3>
+              <div class="table-wrapper">
+                <table class="minimal-grid-table">
+                  <thead>
+                    <tr>
+                      <th>항목</th>
+                      <th>현재 값</th>
+                      <th>상태</th>
+                      <th>추세 (1시간)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detailAnalysisTableBody"></tbody>
+                </table>
+              </div>
+              <div class="analysis-summary-box" id="detailAnalysisSummaryFooter"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="monitor-trio-charts-row">
+          <div class="panel split-mini-chart-card">
+            <h4>전류 변화량 (ΔI) <span class="indicator-highlight-value" id="labelValueCurrent">-</span></h4>
+            <div class="mini-canvas-frame"><canvas id="subChartCurrentNode"></canvas></div>
+          </div>
+          <div class="panel split-mini-chart-card">
+            <h4>전압 변화량 (ΔV) <span class="indicator-highlight-value" id="labelValueVoltage">-</span></h4>
+            <div class="mini-canvas-frame"><canvas id="subChartVoltageNode"></canvas></div>
+          </div>
+          <div class="panel split-mini-chart-card">
+            <h4>Thermal Stress <span class="indicator-highlight-value" id="labelValueThermal">-</span></h4>
+            <div class="mini-canvas-frame"><canvas id="subChartThermalNode"></canvas></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="reportDownloadContentBlock" class="panel" style="display: none; margin: 20px; padding: 25px; background: #111827; border-radius: 8px; color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 15px; margin-bottom: 20px;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; color: #3b82f6;">📥 Azure Storage 관제 보고서 서버 연동</h2>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #94a3b8;">정기 데일리(DAILY) 스케줄러 및 실시간 이상 감지(CRITICAL) 엔진이 클라우드 컨테이너에 백업한 CSV 원본 파일 아카이브 리스트입니다.</p>
+        </div>
+        <button onclick="fetchContainerReportsList()" style="padding: 8px 16px; background: #1f2937; color: #fff; border: 1px solid #374151; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;">🔄 목록 동기화 리프레시</button>
+      </div>
+
+      <div class="table-wrapper" style="max-height: 550px; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="background: #1f2937; color: #94a3b8; font-size: 13px; border-bottom: 2px solid #374151;">
+              <th style="padding: 12px 16px;">보고서 대분류</th>
+              <th style="padding: 12px 16px;">백업 파일명 (CSV 포맷)</th>
+              <th style="padding: 12px 16px;">스토리지 타임스탬프</th>
+              <th style="padding: 12px 16px; text-align: center;">로컬 전송 및 내려받기</th>
+            </tr>
+          </thead>
+          <tbody id="containerReportListTbody" style="font-size: 13px; color: #e2e8f0;">
+            <tr><td colspan="4" style="text-align: center; padding: 30px; color: #64748b;">Azure Storage 계정 통신 커넥션을 스캔하는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="listModal" class="modal-overlay" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 id="modalTitle">상세 데이터 조회</h2>
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="modal-table-wrapper">
+          <table id="modalTable"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
